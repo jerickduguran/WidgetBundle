@@ -1,0 +1,22 @@
+widget[name="{{params.name}}"]{ 
+	border:1px dotted #0000FF;
+	display:inline-block;
+	cursor:pointer;
+	color:#000000;
+	font-family:Arial;
+	font-size:10px;
+	font-weight:normal;
+	padding:3px 10px;
+	text-decoration:none;
+        background: url("{{ asset("bundles/mosaicwidget/images/mosaicwidget.png")}}") no-repeat 5px center ;
+}
+widget[name="{{params.name}}"] label {
+	font-weight: bold;
+        padding-left: 15px;
+}
+widget[name="{{params.name}}"] span {
+	font-style: italic;
+	margin-left:4px;
+}
+.mosaicwidget-input{border: 1px solid #000000;}
+.mosaicwidget-input input{padding: 10px;}

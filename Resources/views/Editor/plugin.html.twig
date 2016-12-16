@@ -1,0 +1,545 @@
+{% spaceless %} 
+	
+    CKEDITOR.plugins.add( 'mosaicwidget', {
+		requires: 'widget', 
+		icons   : 'mosaicwidget', 
+		init    : function( editor ) {   		
+			var mosaicwidget_id  = '{{ uniqueId }}';   
+				this.instanceId  = mosaicwidget_id;   
+				var widget_types = [];
+				{% for id,widget in widgets %}
+					widget_types.push({id:'{{id}}','label': '{{widget.name}}'});
+				{% endfor %} 
+				var getWidgetName = function(id){
+					var label = "";
+					$.each(widget_types,function(i,item){ 
+						if(id == item.id){
+							label = item.label;
+							return false; 
+						}
+					});
+					
+					return label;
+				}
+				 
+				eval("widget_instance_"+editor.id+" = null"); 
+				editor.addContentsCss( '/mosaicwidget/editor/style/content.css' );
+				CKEDITOR.config.baseFloatZIndex = 1031;
+				CKEDITOR.dialog.add('mosaicwidget',function(instance) { 
+				
+				mosaicadmin_many_assoc.prototype.fieldDialogFormListLink = function(event){
+					 var self = event.data.ref; 
+					 self.initializePopup(); 
+					 event.preventDefault();
+					 event.stopPropagation();
+					 
+					 jQuery.blockUI({ message:'Loading...'});  
+					 var element = jQuery(this).parents(sprintf('#%s .sonata-ba-list-field',self.field_widget)); 
+					 if (element.length == 0) {  
+						 jQuery.ajax({ type: 'GET', url: jQuery(this).attr('href')})
+						 .done(function(html, textStatus, jqXHR) { 
+						 
+								 self.field_dialog_content.html(html);  
+								 
+								 //reset elements after modal data changes
+								 Admin.shared_setup(self.field_dialog);  
+								 jQuery('a:not([class*="dropdown-toggle"],[class*="admin-ajax-ignore-event"], [class*="admin-ajax-ignore-tabbable"], [class*="fileupload-exists"], ul.dropdown-menu li > a), a[class*="mosaic-admin-filter-reset-button"], ul.tabdrop li > a, ul.dropdown-menu li > a',self.field_dialog).on('click',{ ref:self},self.fieldDialogFormListLink);
+								 jQuery('form, a:not([class*="mosaic-admin-filter-reset-button"])',self.field_dialog).on('submit', {ref:self}, self.fieldDialogFormListFilter);
+						 })
+						 .fail(function(jqXHR, textStatus, errorThrown){
+								 self.admin.log(sprintf('[%s|field_dialog_form_list] ajax fail', self.id),self.field_dialog);
+								 self.admin.log(sprintf('[%s|field_dialog_form_list] error message', self.id), errorThrown);
+						 })
+						 .always(function() {
+								 self.admin.log(sprintf('[%s|field_dialog_form_list] ajax always', self.id),self.field_dialog); 
+						 });
+						 return;
+					 }  
+ 
+					 var dialog = CKEDITOR.dialog.getCurrent(); 
+					 dialog.setValueOf('attributes',self.target_field_id,element.attr('objectId'));  
+					 dialog.setValueOf('attributes',self.target_field_id_title,element.attr('objectTitle'));   
+					 
+					 var document		= editor.element.getDocument();  
+					 var labelElement   = $("#"+self.ref_title_id); 				 
+					 if (labelElement) {  
+					    labelElement.parent().parent("tr").prev().show().find("p").html("<p id='"+self.uid+"' class='reference_wrapper'><label>Reference:</label> <br><a class='active' target='_blank' href='"+element.attr('objectUrl')+"' style='cursor:pointer;color:#3c8dbc;'>"+element.attr('objectTitle')+"</a></p>");	
+					 } 
+					 self.field_dialog.modal('hide');    
+					 jQuery.unblockUI();
+			  };
+				  
+				  mosaicadmin_many_assoc.prototype.initializePopup =  function() { 
+						if (!this.field_dialog) {
+						   var div = sprintf("<div aria-hidden='true' class='modal fade'id='%s' aria-hidden='false'>"+
+											 " <div class='modal-dialog modal-lg'>"+
+											 " <div class='modal-content'>"+ 
+											 " <div class='modal-header'><button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button><h4 class='modal-title'>Entity List</h4></div> "+
+											 " <div class='dynamic-content'></div></div></div>"+
+											 " </div>",this.field_widget);
+						   this.field_dialog = jQuery(div);
+						   jQuery(document.body).append(self.field_dialog); 
+						   this.field_dialog_content = this.field_dialog.find(".dynamic-content");
+						   // move the dialog as a child of the root element, nested form breaks html ...
+						   this.admin.log(sprintf('[%s|initializePopup()] move dialog container as a document child', this.id));
+						}
+					};
+					
+					mosaicadmin_many_assoc.prototype.fieldDialogFormList = function(event) {
+						var self = event.data.ref;
+						self.initializePopup(); 
+						event.preventDefault();
+						event.stopPropagation(); 
+						jQuery.blockUI({ message:'Loading...'}); 
+						self.admin.log(sprintf('[%s|fieldDialogFormList] open the list modal', self.id)); 
+						var a = jQuery(this); 
+						self.field_dialog_content.empty();
+
+						// retrieve the form element from the related admin generator
+						jQuery.ajax({
+							url: a.attr('href'),
+							dataType: 'html'
+						})
+						.done(function(html, textStatus, jqXHR) { 
+
+							self.admin.log(sprintf('[%s|fieldDialogFormList] retrieving the list content', self.id));
+
+							/* populate the popup container */
+							self.field_dialog_content.html(html);
+							/* capture the submit event to make an ajax call, ie : POST data to the
+								related create admin */
+							jQuery('a:not([class*="admin-ajax-ignore-event"], [class*="admin-ajax-ignore-tabbable"],  [class*="fileupload-exists"],  ul.dropdown-menu li > a), a[class*="mosaic-admin-filter-reset-button"], ul.tabdrop li > a, ul.dropdown-menu li > a',self.field_dialog).on('click', {ref:self}, self.fieldDialogFormListLink);
+							jQuery('form, a:not([class*="mosaic-admin-filter-reset-button"])',self.field_dialog).on('submit', {ref:self}, self.fieldDialogFormListFilter);
+
+							/* open the dialog in modal mode */
+							var init_width = Math.round(jQuery(window).width() - (jQuery(window).width() * 0.2));
+							init_width = (init_width > 980) ? 980 :  init_width;
+							self.field_dialog.modal({'width': init_width });
+							self.field_dialog.on('hidden', function (event) {
+								if (jQuery(event.target).hasClass('admin-filter-ajax')) {
+									return false;
+								} else {
+									self.admin.log(sprintf('[%s|fieldDialogFormList] modal hidden - removing `on` events', self.id));
+									/* make sure we have a clean state */
+									jQuery('a:not([class*="admin-ajax-ignore-event"], [class*="admin-ajax-ignore-tabbable"],  [class*="fileupload-exists"], ul.dropdown-menu li > a), a[class*="mosaic-admin-filter-reset-button"], ul.tabdrop li > a, ul.dropdown-menu li > a', jQuery(this)).off('click');
+									jQuery('form, a:not([class*="mosaic-admin-filter-reset-button"])', jQuery(this)).off('submit');
+									jQuery(this).empty();
+									self.field_dialog = null;
+								}
+							});
+
+							self.field_dialog.on('shown', function (event) {
+								self.admin.addFilters(jQuery(this));
+								self.admin.initElements(jQuery(this));
+							});
+
+						})
+						.fail(function(jqXHR, textStatus, errorThrown){
+						   self.admin.log(sprintf('[%s|fieldDialogFormList] ajax fail', self.id),self.field_dialog);
+						   self.admin.log(sprintf('[%s|fieldDialogFormList] Error Message', self.id), errorThrown);
+						})
+						.always(function() {
+						   self.admin.log(sprintf('[%s|fieldDialogFormList] ajax always', self.id) ,self.field_dialog);
+						});
+					};
+                   
+				var widgetInstance = editor.widgets.focused;
+				if(!widgetInstance){ 
+					widgetInstance = eval("widget_instance_"+instance.id);
+				} 
+				 
+				
+                {% for id,widget in widgets %}
+					{% for field,field_attributes in widget.settings %}  
+						{% set uniqid = id|replace({".":"_"})~field %} 
+						var picker_{{uniqid}} = '{{uniqid}}';
+						{% if field_attributes.type == 'select' or field_attributes.type == 'radio' %} 
+							var {{uniqid}}_items        = [];  
+							var {{uniqid}}_choices      = [];    
+							var {{uniqid}}_default_item = ''; 
+							{% for name,value in field_attributes.choices %} 
+								{% if loop.index == 1 %}
+									{{uniqid}}_default_item  = "{{value}}";
+								{% endif %}
+								{{uniqid}}_choices.push(['{{value}}','{{name}}']);
+							{% endfor %}  
+						{% elseif field_attributes.type == 'entity' or field_attributes.type == 'entity_with_dependent' %} 
+							{% set object_info = "" %}
+							{% if field_attributes.type == 'entity' %}  
+								{% set object_info = field_attributes.admin_code %} 
+							{% endif %}						
+							var mtom_{{uniqid}} = new mosaicadmin_many_assoc({
+								id: picker_{{uniqid}},
+								admin: Admin,
+								field_dialog: null,
+								field_widget: 'field_widget_'+picker_{{uniqid}},
+								field_container: 'field_container_'+picker_{{uniqid}},
+								sonata_admin_edit: 'list' ,
+								url_sonata_admin_retrieve_form_element: '',
+								url_sonata_admin_short_object_information: "{{ object_info }}",
+								url_ajax_loading: '',
+								ajax_loading_description: ''
+							});
+						   mtom_{{uniqid}}.target_field_id       = '{{id}}_{{field}}';
+						   mtom_{{uniqid}}.target_field_id_title = '{{id}}_{{field}}_title';
+						   mtom_{{uniqid}}.target_field_id_link_reference  = '{{id}}_{{field}}_link_reference_'+widgetInstance.id; 
+						{% endif %}
+					{% endfor %}
+                {% endfor %}
+				
+
+             return {
+                title    : 'Mosaic Widget', 
+                minWidth : 500,
+                minHeight: 300, 
+                contents : [{
+					id      : 'settings',
+					label   : "Settings",
+					elements: [{
+						id   : 'type',
+						type : 'select',
+						label: 'Type',
+						items: [ 
+							{% for id,widget in widgets %}
+								["{{widget.name}}","{{id}}"]{% if loop.last == false %},{% endif %} 
+							{% endfor %} 
+						],
+						setup: function( widget ) {  
+							var elm  = this;
+								$("#"+elm._.inputId).css({'height':'25px'}); 
+								if(widget.data.type != null)
+									this.setValue( widget.data.type );  
+                                },
+                                commit: function( widget ) {
+                                    widget.setData('type', this.getValue() );
+                                },
+                                onChange: function( api ){    
+                                    var value  = this.getValue();
+                                    var dialog = this.getDialog();
+                                    var attributesTab = dialog.definition.getContents( 'attributes' ); 
+                                    $.each(attributesTab.elements, function(id,object){
+                                        var field = attributesTab.get(object.id);
+                                        var target_element = dialog.getContentElement("attributes",field.id);  
+										if(object.id.indexOf("link_reference_"+widgetInstance.id) > -1) { 	 
+											var type         = dialog.getContentElement('settings', 'type');  
+										    var target_title = field.id.replace("_link_reference_"+widgetInstance.id,""); 							 
+											var wrapper		 = dialog.getContentElement('attributes',target_title+"_title"); 
+											
+											var widgetInstance2 = editor.widgets.focused;
+											if(!widgetInstance2){ 
+												widgetInstance2 = eval("widget_instance_"+instance.id);
+											}  
+											
+											if(type.getValue() != "" && target_title.indexOf(type.getValue()) > -1 && $("#"+wrapper.domId).parent().parent("tr").prev().html().indexOf(widgetInstance2.data.rnId) > -1){
+												$("#"+wrapper.domId).parent().parent("tr").prev().show();  
+											}else{
+												$("#"+wrapper.domId).parent().parent("tr").prev().hide(); 
+											}
+										}else if(object.id.indexOf(value)> -1){   
+                                            $("#"+target_element.domId).show();
+                                            $("#"+target_element.domId).parent().parent("tr").css({'display':''});
+                                        }else{  
+                                            $("#"+target_element.domId).hide();
+                                            $("#"+target_element.domId).parent().parent("tr").css({'display':'none'});
+                                        }
+                                    });
+                                },
+                                validate: function(){
+                                    if ( !this.getValue() ) {
+                                        alert('Type cannot be empty.' );
+                                        return false;
+                                    }
+                                }
+                            }]
+						},{
+                        id      : 'attributes',
+                        label   : "Attributes", 
+                        elements: [ 
+							{% spaceless %}
+							{% for id,widget in widgets %}
+								{% for field,field_attributes in widget.settings %} 
+									{% set uniqid = id|replace({".":"_"})~field %}
+									{% if field_attributes.type == 'entity' or field_attributes.type == 'entity_with_dependent' %} 										 
+									{
+										id: '{{id}}_{{field}}_link_reference_'+widgetInstance.id,
+										type: 'html',
+										html: '<p id="{{id}}_{{field}}_link_reference_'+widgetInstance.id+'_link"></p>',  
+										onShow: function(){	  	
+											var document = editor.element.getDocument();
+											var element = document.getById('{{id}}_{{field}}_link_reference_'+widgetInstance.id+'_link');
+											if (element) { 
+												element.getParent().getParent().hide();  
+											}    
+										}, 
+										setup: function( widget ){ 
+											var attributes = widget.data.attributes;    
+											var that = this; 
+											if(attributes != null) {  
+												$.each( attributes, function( i, attributeObj ) { 
+													var variant = '{{id}}_{{field}}_link_reference_'+widgetInstance.id; 
+													var type    = widget.data.type;   
+													if(type != "" && variant.indexOf(type) > -1 && attributeObj.indexOf('reference') > -1){
+
+														var data	 = attributeObj.split("<::>");   
+														var document = editor.element.getDocument();   														
+														 
+														var labelElement = document.getById('{{id}}_{{field}}_link_reference_'+widgetInstance.id+'_link'); 
+														if (labelElement) {  
+														   labelElement.setHtml(data[1]);	
+														   labelElement.getParent().getParent().show(); 
+														}  
+													}  
+
+												}); 
+											}  
+										}
+									},
+									{
+										id   : '{{id}}_{{field}}_title',
+										type : 'text',
+										label: 'Title',   
+										setup: function( widget ) {
+											var attributes = widget.data.attributes;  
+											var elm        = this;
+											$("#"+elm._.inputId).css({'height':'25px'}); 
+											if(attributes != null) {
+												$.each( attributes, function( i, attributeObj ) {
+													if(attributeObj.indexOf("{{field}}_title") > -1) { 
+														var data = attributeObj.split("<::>");
+														elm.setValue(data[1]);
+													}
+												}); 
+											} 
+										}, 
+										commit: function( widget ) { 
+											widget.setData('{{id}}_{{field}}_title', this.getValue() );  
+										},
+										onShow: function(){
+											var dialog  = this.getDialog();
+											var wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}_title');  	 
+											$("#"+wrapper.domId).hide();   
+										}
+									},{
+										id   : '{{id}}_{{field}}',
+										type : 'text',
+										label: '{{field_attributes.label}}',   
+										setup: function( widget ) {
+											var attributes = widget.data.attributes;  
+											var elm        = this;
+											$("#"+elm._.inputId).css({'height':'25px'}); 
+											if(attributes != null) {
+												$.each( attributes, function( i, attributeObj ) {
+													if(attributeObj.indexOf("{{field}}") > -1) { 
+														var data = attributeObj.split("<::>");
+														elm.setValue(data[1]);
+													}
+												}); 
+											} 
+										}, 
+										commit: function( widget ) { 
+											widget.setData('{{id}}_{{field}}', this.getValue() );  
+										},
+										onShow: function(){
+											var dialog  = this.getDialog();
+											var wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}');  	 
+											$("#"+wrapper.domId).hide();   
+										}
+									},{
+										id : '{{id}}_{{field}}_btn',
+										type : 'button',
+										label: "Select Item",
+										onClick: function(){    			 
+											var dialog  			= this.getDialog();  
+											{% if  field_attributes.type == 'entity_with_dependent' %}	 
+												 var types = []; 
+												 {% for type,attrs in field_attributes.dependency_map %}
+													types.push({id: '{{type}}',admin_code: '{{ attrs.admin_code}}',admin_list_route: '{{attrs.admin_list_route}}'});
+												 {% endfor %} 											
+												 var getAdminCode = function(type){
+													   var admin_code = ""; 
+													   $.each(types, function(i, item) {  
+															if(type == item.id){
+																admin_code = item.admin_code;
+																return false;
+															}
+													   });												   
+													   return admin_code;												 
+												 }		 							 
+												 var getAdminListRoute = function(type){  
+													   var admin_list_url = "";  
+													   $.each(types, function(i, item) {  
+															if(type == item.id){
+																admin_list_url = item.admin_list_route;
+																return false;
+															}
+													   }); 
+													   return admin_list_url;												 
+												 }
+												 
+												 var type   			= dialog.getContentElement('attributes','{{id}}_{{field_attributes.dependency_field}}').getValue(); 
+												 var admin_list_route   = getAdminListRoute(type); 
+												 var admin_code		    = getAdminCode(type);   
+												 var anchor = jQuery("<a>"); 
+												 anchor.attr('href',admin_list_route); 
+												 mtom_{{uniqid}}.url_sonata_admin_short_object_information = admin_code;  
+											 {% else %}
+												 var anchor = jQuery("<a>"); 
+												 anchor.attr('href','{{field_attributes.admin_list_route|raw}}');  
+											 {% endif %}	
+											 
+												var widget = editor.widgets.focused;
+												if(widget){ 
+												    mtom_{{uniqid}}.uid = widget.data.rnId;  
+												}else if(eval("widget_instance_"+instance.id)){  
+													var _widget = eval("widget_instance_"+instance.id); 
+												    mtom_{{uniqid}}.uid = _widget.data.rnId;  
+												}  
+												 var title_wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}_title');  
+												 
+												 mtom_{{uniqid}}.ref_title_id = title_wrapper.domId; 
+												 mtom_{{uniqid}}.startFieldDialogFormList(anchor);  
+									},
+										onShow: function(){  				
+											var dialog  = this.getDialog();
+											var wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}_btn');  	 
+											$("#"+wrapper.domId).hide(); 
+										}
+									}   
+									{% else %}
+									{
+										id: '{{id}}_{{field}}',	
+										type: '{{field_attributes.type}}',
+										label: '{{field_attributes.label}}',   
+										setup: function( widget ){			
+											var elm  = this;   
+											$("#"+elm._.inputId).css({'height':'25px'});  
+											{% if field_attributes.type == 'textarea' %} 
+												$("#"+elm._.inputId).css({'height':'70px'});  
+											{% endif %}
+											{% if field_attributes.type == 'radio' %} 
+												//Fix issue on radio onShow Event not triggered
+												var dialog  = elm.getDialog();
+												var type    = dialog.getContentElement('settings', 'type'); 
+												var wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}'); 
+												if(type.getValue() == ""){
+													$("#"+wrapper.domId).hide(); 
+												}
+											{% endif %} 
+											var attributes = widget.data.attributes;  
+											if(typeof attributes != "undefined" && attributes != null){
+												$.each( attributes, function( i, attributeObj ){
+													if(attributeObj.indexOf("{{field}}") > -1){ 
+														var data = attributeObj.split("<::>"); 
+														elm.setValue(data[1]);  
+													}
+												}); 
+											}   
+										},
+										{% if field_attributes.type == 'select' or field_attributes.type == 'radio' %}  
+											items:   {{uniqid}}_choices,'default': {{uniqid}}_default_item,
+										{% endif %}
+										commit: function( widget ) { 
+											widget.setData('{{id}}_{{field}}', this.getValue() );  
+										},
+										onShow: function(){  
+											var dialog  = this.getDialog();
+											var wrapper = dialog.getContentElement('attributes','{{id}}_{{field}}'); 
+											$("#"+wrapper.domId).hide();   
+										},
+										className: "mosaicwidget-input"
+									}
+									{% endif %} 
+									{% if loop.last == false %},{% endif %}
+								{% endfor %} 
+								{% if loop.last == false %},{% endif %}
+							{% endfor %}
+                        {% endspaceless %}
+                        ]
+                    }], 
+                    onOk: function(){  
+						var dialog = this;
+					    var uid = Math.random();
+                        var type = this.getContentElement('settings', 'type'); 
+                        if(type.getValue() == ""){ return; }    
+                        var attributesTab  = this.definition.getContents( 'attributes' );   
+                        var _self          = this;   
+                        var attributes     = []; 
+                        $.each(attributesTab.elements, function(id,object){ 
+                            var field          = attributesTab.get(object.id);  
+                            var target_element = _self.getContentElement("attributes",field.id);				 
+                            if(object.id.indexOf(type.getValue())> -1 && object.id.indexOf('_btn') < 0 ){  
+								if(object.id.indexOf('_link_reference') >-1 ){ 
+									 field.fieldId  = field.id.replace(type.getValue()+"_","");
+									 var title_field = type.getValue() + "_"+ field.fieldId.substring(0, field.fieldId.indexOf('_link_reference')) + "_title"; 
+									 
+									 var title_wrapper  = dialog.getContentElement('attributes',title_field);  
+									 var document		= editor.element.getDocument();  
+									 var labelElement   = $("#"+title_wrapper.domId);  
+									 if (labelElement) {   
+										var reference = labelElement.parent().parent("tr").prev().find("p").first().html();	
+										attributes.push(field.fieldId+"<::>"+reference); 
+									 } 
+									
+								}else{
+									 field.fieldId      = field.id.replace(type.getValue()+"_","");  
+									 var attributeValue = _self.getContentElement('attributes',field.id).getValue();
+									 attributes.push(field.fieldId+"<::>"+attributeValue);
+								} 
+                            }
+                        });  	  
+                        var widget = editor.widgets.focused; 
+                        if(widget){
+                            widget.setData("attributes",attributes);  
+							widget.element.setAttribute('uid',"_"+Math.random());
+                        }else if(eval("widget_instance_"+instance.id)){  
+							var _widget = eval("widget_instance_"+instance.id);
+                            _widget.setData('attributes',attributes);    
+							_widget.element.setAttribute('uid',"_"+Math.random());
+                        }  
+                    }
+            };
+        });
+
+        editor.widgets.add( 'Mosaicwidget', {
+            button         : 'Mosaic Widget',
+            template       : '<widget title="Mosaic Widget" class="{{ params.class}}" name="{{ params.name}}"></widget>',  
+            allowedContent : 'widget(!{{ params.class}});{data-*}', 
+            requiredContent: 'widget({{ params.class}})', 
+            dialog         : 'mosaicwidget', 
+            upcast         : function( element ) { 
+                return element.name == 'widget' && element.attributes.name == '{{ params.name}}';
+            },
+            init: function() {   
+                var rnId       = this.element.data('rnId' ); 
+				if(null == rnId){ 
+					var rnId   = "_"+Math.random() + this.rnid;  
+				}
+				
+				this.setData('rnId',rnId);
+                var type       = this.element.data('type' ); 
+                var attributes = this.element.data('attributes'); 
+				var label	   = getWidgetName(type);
+                this.setData('type', type ); 
+                if(attributes != null){ 
+                    var raw_attributes = attributes.split(','); 
+                    this.setData('attributes', raw_attributes); 
+                } 
+
+				this.element.setHtml("<label>WIDGET:</label><span>"+label+"</span>");
+                eval("widget_instance_"+this.editor.id+" = this;");   
+				
+            }, 
+            data: function() {   
+                this.element.data("type",this.data.type); 
+                this.element.data("attributes",this.data.attributes);
+				this.element.data('rnId',this.data.rnId);
+				var label	   = getWidgetName(this.data.type);
+				this.element.setHtml("<label>WIDGET:</label><span>" +label+ "</span>");
+                eval("widget_instance_"+this.editor.id+" = this;");  
+			
+            },
+			rnid: Math.random()
+        } );
+    }
+} ); 
+{% endspaceless %}

@@ -1,0 +1,5 @@
+{% extends "SonataPageBundle:Block:block_container.html.twig" %}
+
+{% block block_child_render %}
+    {{ sonata_page_render_block(child)|render_widgets }}
+{% endblock %}

@@ -1,0 +1,7 @@
+{%if post %} 
+        {% set title = post.title %}
+        {% if attributes.post_id_title != "" %}
+            {% set title = attributes.post_id_title %}
+        {% endif %}
+        <a href="{{ path(mosaic_news_page_page_by_post(post)) }}">{{title}}</a>  
+{% endif %}

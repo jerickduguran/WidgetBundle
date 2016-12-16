@@ -1,0 +1,17 @@
+{% if postSet %} 
+    <div class="panel panel-default">
+        <div class="panel-body"> 
+            <h3 class="panel-title">{{attributes.postset_id_title}}</h3>
+            <div class="panel-body">
+                {{attributes.description|raw}} 
+                {% if postSet.postSetsHasPosts %}
+                    <ul>
+                        {% for post in postSet.postSetsHasPosts %}
+                            <li><a href="{{ path(mosaic_news_page_page_by_post(post)) }}">{{ post.post.title }}</a></li>
+                        {% endfor %}
+                    </ul>
+                {% endif%}
+            </div> 
+        </div>
+    </div>   
+{% endif %}

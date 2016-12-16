@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <parameters>
+        <parameter key="mosaic_widget.widget.abstract.class">Groupm\Mosaic\Bundle\WidgetBundle\Widget\AbstractWidget</parameter> 
+        <parameter key="mosaic_widget.twig_extension.core.class">Groupm\Mosaic\Bundle\WidgetBundle\Twig\CoreExtension</parameter> 
+        <parameter key="mosaic_widget.editor.manager.class">Groupm\Mosaic\Bundle\WidgetBundle\Widget\WidgetManager</parameter>
+        <parameter key="mosaic_widget.widget.post_label.class">Groupm\Mosaic\Bundle\WidgetBundle\Widget\PostLabelWidget</parameter>
+        <parameter key="mosaic_widget.widget.post_link.class">Groupm\Mosaic\Bundle\WidgetBundle\Widget\PostLinkWidget</parameter>
+        <parameter key="mosaic_widget.widget.postset.class">Groupm\Mosaic\Bundle\WidgetBundle\Widget\PostSetWidget</parameter>
+    </parameters>
+    
+    <services>
+        <service id="mosaic_widget.widget.abstract" class="%mosaic_widget.widget.abstract.class%" abstract="true">
+            <argument id="service_container" type="service"/>
+        </service>
+		
+        <service id="mosaic_widget.editor.manager.widget" class="%mosaic_widget.editor.manager.class%"/>
+      
+        <!-- Twig Extensions -->
+        <service id="mosaic_widget.twig_extension.core" class="%mosaic_widget.twig_extension.core.class%">
+            <tag name="twig.extension" />
+            <argument type="service" id="service_container" />
+        </service>
+		
+        <service id="mosaic_widget.widget.post_label" class="%mosaic_widget.widget.post_label.class%" parent="mosaic_widget.widget.abstract">
+            <tag name="mosaic_widget.widget" />
+        </service>
+        
+        <service id="mosaic_widget.widget.post_link" class="%mosaic_widget.widget.post_link.class%" parent="mosaic_widget.widget.abstract">
+            <tag name="mosaic_widget.widget" />
+        </service>
+        
+        <service id="mosaic_widget.widget.postset" class="%mosaic_widget.widget.postset.class%" parent="mosaic_widget.widget.abstract">
+            <tag name="mosaic_widget.widget" />
+        </service>
+		
+    </services> 
+</container>

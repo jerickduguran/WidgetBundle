@@ -1,0 +1,36 @@
+{
+    "name": "groupm-mosaic/widget-bundle",
+    "type": "symfony-bundle",
+    "description": "Mosaic Widget Bundle",
+    "keywords": ["symfony2", "GroupM", "Mosaic", "Mosaic Bundle", "Widget"],
+    "homepage": "https://bitbucket.org/groupmproducts/widget-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+          "name": "Jerick Duguran",
+          "email": "jerick.duguran@movent.com",
+          "homepage": "http://www.movent.com"
+        },
+        {
+          "name": "Diszo Sasil",
+          "email": "diszo.sasil@movent.com",
+          "homepage": "http://www.movent.com"
+        },
+        {
+          "name": "Andrew Aculana",
+          "email": "andrew.aculana@movent.com",
+          "homepage": "http://www.movent.com"
+        }
+    ],
+    "require": {
+        "groupm-mosaic/core-bundle":  "dev-master"
+    },
+    "autoload": {
+        "psr-4": { "Groupm\\Mosaic\\Bundle\\WidgetBundle\\": "" }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "2.0.x-dev"
+        }
+    }
+}
